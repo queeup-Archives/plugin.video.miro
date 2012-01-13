@@ -68,8 +68,8 @@ class Main:
       s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
       if s.keys() != []:
         if Debug: self.LOG('DEBUG: My Subscriptions directory activated.')
-        s.close()
         category += [{'title':'[B]My Subscriptions[/B]', 'url':'', 'action':'mysubscriptions'}]
+      s.close()
     category += [{'title':'Categories', 'url':'https://www.miroguide.com/api/list_categories?datatype=json', 'action':'categories'},
                  {'title':'Languages', 'url':'https://www.miroguide.com/api/list_languages?datatype=json', 'action':'categories'},
                  {'title':'New Channels', 'url':'http://feeds.feedburner.com/miroguide/new', 'action':'getmirofeed'},
