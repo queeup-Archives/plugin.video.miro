@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Debug
-Debug = True
+Debug = False
 
 # Imports
 import sys, os, re, string, urllib, urllib2, simplejson, feedparser, shelve
@@ -65,15 +65,11 @@ class Main:
     category = []
     # If there is miro.db show My Subscription directory.
     if os.path.isfile(xbmc.translatePath(__cachedir__ + '/miro.db')):
-      # Check db for subscriptions. If there is no delete miro.db.
-      s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db')
-      if s.keys() == []:
-        if Debug: self.LOG('DEBUG: My Subscriptions is empty. removing miro.db file')
-        os.remove(xbmc.translatePath(__cachedir__ + '/miro.db'))
-      else:
+      s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
+      if s.keys() != []:
         if Debug: self.LOG('DEBUG: My Subscriptions directory activated.')
+        s.close()
         category += [{'title':'[B]My Subscriptions[/B]', 'url':'', 'action':'mysubscriptions'}]
-      s.close()
     category += [{'title':'Categories', 'url':'https://www.miroguide.com/api/list_categories?datatype=json', 'action':'categories'},
                  {'title':'Languages', 'url':'https://www.miroguide.com/api/list_languages?datatype=json', 'action':'categories'},
                  {'title':'New Channels', 'url':'http://feeds.feedburner.com/miroguide/new', 'action':'getmirofeed'},
@@ -94,7 +90,7 @@ class Main:
 
   def GetSubscriptions(self):
     if Debug: self.LOG('DEBUG: GetSubscriptions()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db')
+    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
     for k, v in s.iteritems():
       id = k
       name = v['name']
@@ -109,7 +105,7 @@ class Main:
                                    'plot' : summary,
                                    })
       contextmenu = [('UnSubscription', 'XBMC.RunPlugin(%s?action=unsubscribe&key=%s)' % \
-                                                    (sys.argv[0], id))]
+                                                       (sys.argv[0], id))]
       listitem.addContextMenuItems(contextmenu, replaceItems=False)
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
@@ -139,19 +135,17 @@ class Main:
 
   def GetDirectory(self, filter, title, sort='popular'):
     if Debug: self.LOG('DEBUG: GetDirectory()')
+    # for next page
     try:
       offset = int(self.Arguments('offset')) + 20
     except:
       offset = 0
     url = MIRO_API + 'get_channels?datatype=json&filter=%s&filter_value=%s&sort=%s&offset=%s' % (filter, title, sort, offset)
-    print url
     results = simplejson.loads(fetcher.fetch(url, CACHE_TIME))
     totalitem = len([i['id'] for i in results])
     for entry in results:
       id = entry['id']
       name = entry['name'].encode('utf-8', 'replace')
-      #if self._issubscripted(id):
-      #  name = '%s - %s' % (name, '[B]Subscripted[/B]')
       publisher = entry['publisher']
       feedUrl = entry['url']
       if not feedUrl: continue
@@ -197,9 +191,9 @@ class Main:
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def GetMiroFeed(self, url, query=''):
+  def GetMiroFeed(self, url):
     if Debug: self.LOG('DEBUG: GetMiroFeed()')
-    feedHtml = fetcher.fetch(url + query.replace(' ', '+'))
+    feedHtml = fetcher.fetch(url, CACHE_TIME)
     encoding = feedHtml.split('encoding="')[1].split('"')[0]
     feedHtml = feedHtml.decode(encoding, 'ignore').encode('utf-8')
 
@@ -218,8 +212,6 @@ class Main:
           continue #skip this, it likely will bork
       # I put it here because above isinstance code not working well with some languages.
       title = infoLabels['title'] = title.encode('utf-8', 'replace') #.encode('utf-8')
-      #if self._issubscripted(id):
-      #  title = '%s - %s' % (title, '[B]Subscripted[/B]')
       try:
         infoLabels['date'] = item.updated
       except:
@@ -273,7 +265,6 @@ class Main:
     hasInvalidItems = False
     for item in items:
       infoLabels = {}
-      #Log(item)
       infoLabels['duration'] = ''
       title = infoLabels['title'] = self.StripTags(item.title.replace('&#39;', "'").replace('&amp;', '&'))
       if isinstance(title, str): # BAD: Not true for Unicode strings!
@@ -325,7 +316,6 @@ class Main:
         if key.count('watch') == 0:
           key = 'http://www.youtube.com/watch?v=' + key.split('v/')[-1][:11] #http://www.youtube.com/v/hlkDIYxUrpA&amp;amp;hl=en&amp;amp;fs=1
           thumb = 'http://i.ytimg.com/vi/%s/default.jpg' % key.split("=")[-1]
-          #dir.Append(Function(VideoItem(PlayYouTubeVideo, title, date=date, subtitle=subtitle, desc=summary, thumb=thumb, duration=duration), ext='flv', id=key))
           listitem_yt = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
           listitem_yt.setInfo(type='video', infoLabels=infoLabels)
           parameters = '%s?action=playyoutubevideo&url=%s' % (sys.argv[0], key)
@@ -338,8 +328,6 @@ class Main:
       listitem.setInfo(type='video', infoLabels=infoLabels)
       listitem.setProperty('IsPlayable', 'true')
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(key, listitem, False)])
-      #if Debug: self.LOG('\nTitle:%s\nPlot:%s\nDate:%s\nDuration:%s\nSize:%s\nThumb:%s\n%s' \
-                          #% (infoLabels['title'], infoLabels['plot'], infoLabels['date'], infoLabels['duration'], infoLabels['size'], thumb, '-' * 13))
     # Sort methods and content type...
     xbmcplugin.setContent(int(sys.argv[1]), 'movies')
     if infoLabels['date']:
@@ -384,7 +372,6 @@ class Main:
 
     url = fmts_info[str(fmt)]
     url = url.replace('\\u0026', '&')
-    #Log(url)
     return Redirect(url)
 
   def StripTags(self, str):
@@ -392,7 +379,7 @@ class Main:
 
   def _subscribe(self, key, title, url, thumb, desc):
     if Debug: self.LOG('DEBUG: _subscribe()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db')
+    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
     try:
       s[str(key)] = {'name' : title,
                      'url' : url,
@@ -403,7 +390,7 @@ class Main:
 
   def _unsubscribe(self, key):
     if Debug: self.LOG('DEBUG: _unubscribe()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db')
+    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
     try:
       del s[str(key)]
     finally:
@@ -411,7 +398,7 @@ class Main:
 
   def _issubscripted(self, key):
     if Debug: self.LOG('DEBUG: _issubscripted()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db')
+    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
     if s.has_key(str(key)):
       return True
     else:
