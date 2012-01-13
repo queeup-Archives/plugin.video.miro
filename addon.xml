@@ -3,14 +3,14 @@
   id="plugin.video.miro"
   version="1.0.0"
   name="Miro"
-  provider-name="Plex &amp; queeup">
+  provider-name="Plex, queeup">
   <requires>
     <import addon="xbmc.python"
             version="1.0"/>
     <import addon="script.module.simplejson"
             version="2.0.10"/>
     <import addon="script.module.feedparser"
-            version="5.0.1"/>
+            version="5.1"/>
   </requires>
   <extension point="xbmc.python.pluginsource"
              library="addon.py">
