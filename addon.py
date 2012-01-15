@@ -29,6 +29,8 @@ CACHE_TIME = CACHE_1HOUR
 
 MIRO_URL = 'http://www.miroguide.com/'
 MIRO_API = 'https://www.miroguide.com/api/'
+# Our database
+db = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
 
 # Fanart
 xbmcplugin.setPluginFanart(int(sys.argv[1]), __fanart__)
@@ -38,7 +40,7 @@ class Main:
     if ("action=playyoutubevideo" in sys.argv[2]):
       self.PlayYouTubeVideo()
     elif ("action=categories" in sys.argv[2]):
-      self.Categories()
+      self.Categories(self.Arguments('filter'))
     elif ("action=getdirectory" in sys.argv[2]):
       self.GetDirectory(self.Arguments('filter'), self.Arguments('title'))
     elif ("action=getfeed" in sys.argv[2]):
@@ -46,42 +48,46 @@ class Main:
     elif ("action=getmirofeed" in sys.argv[2]):
       self.GetMiroFeed(self.Arguments('url', True))
     elif ("action=subscribe" in sys.argv[2]):
-      self._subscribe(self.Arguments('key'),
+      self._subscribe(self.Arguments('id'),
                       self.Arguments('name', True),
                       self.Arguments('feedurl', True),
                       self.Arguments('thumbnail_url'),
                       self.Arguments('description',))
-      self._notification('Subscribe', 'Feed added to My Subscriptions!')
+      self._notification(__language__(30101), __language__(30103))
     elif ("action=unsubscribe" in sys.argv[2]):
-      self._unsubscribe(self.Arguments('key', False))
-      self._notification('UnSubscribe', 'Feed deleted from My Subscriptions!')
+      self._unsubscribe(self.Arguments('id', False))
+      self._notification(__language__(30102), __language__(30104))
     elif ("action=mysubscription" in sys.argv[2]):
       self.GetSubscriptions()
     else:
       self.START()
 
   def START(self):
-    if Debug: self.LOG('DEBUG: START()')
+    if Debug: self.LOG('START()')
     category = []
     # If there is miro.db show My Subscription directory.
     if os.path.isfile(xbmc.translatePath(__cachedir__ + '/miro.db')):
-      s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
-      if s.keys() != []:
+      if db.keys() != []:
         if Debug: self.LOG('DEBUG: My Subscriptions directory activated.')
-        category += [{'title':'[B]My Subscriptions[/B]', 'url':'', 'action':'mysubscriptions'}]
-      s.close()
-    category += [{'title':'Categories', 'url':'https://www.miroguide.com/api/list_categories?datatype=json', 'action':'categories'},
-                 {'title':'Languages', 'url':'https://www.miroguide.com/api/list_languages?datatype=json', 'action':'categories'},
-                 {'title':'New Channels', 'url':'http://feeds.feedburner.com/miroguide/new', 'action':'getmirofeed'},
-                 {'title':'Featured Channels', 'url':'http://feeds.feedburner.com/miroguide/featured', 'action':'getmirofeed'},
-                 {'title':'Popular Channels', 'url':'http://feeds.feedburner.com/miroguide/popular', 'action':'getmirofeed'},
-                 {'title':'Top Rated Channels', 'url':'http://feeds.feedburner.com/miroguide/toprated', 'action':'getmirofeed'},
-                 {'title':'HD Channels', 'url':'https://www.miroguide.com/rss/tags/HD', 'action':'getmirofeed'},
-                 #{'title':'Search for Feed...', 'url':'https://www.miroguide.com/rss/search/', 'action':'getmirofeed'},
+        category += [{'title':__language__(30201), 'url':'', 'action':'mysubscriptions'}]
+      db.close()
+    category += [{'title':__language__(30202), 'url':'https://www.miroguide.com/api/list_categories?datatype=json', 'action':'categories', 'filter':'category'},
+                 {'title':__language__(30203), 'url':'https://www.miroguide.com/api/list_languages?datatype=json', 'action':'categories', 'filter':'language'},
+                 {'title':__language__(30204), 'url':'http://feeds.feedburner.com/miroguide/new', 'action':'getmirofeed'},
+                 {'title':__language__(30205), 'url':'http://feeds.feedburner.com/miroguide/featured', 'action':'getmirofeed'},
+                 {'title':__language__(30206), 'url':'http://feeds.feedburner.com/miroguide/popular', 'action':'getmirofeed'},
+                 {'title':__language__(30207), 'url':'http://feeds.feedburner.com/miroguide/toprated', 'action':'getmirofeed'},
+                 {'title':__language__(30208), 'url':'https://www.miroguide.com/rss/tags/HD', 'action':'getmirofeed'},
+                 #{'title':__language__(30209), 'url':'https://www.miroguide.com/rss/search/', 'action':'getmirofeed'},
                  ]
     for i in category:
+      try:
+        filter = i['filter']
+      except:
+        filter = ''
       listitem = xbmcgui.ListItem(i['title'], iconImage='DefaultFolder.png', thumbnailImage=__icon__)
-      parameters = '%s?action=%s&url=%s&title=%s' % (sys.argv[0], i['action'], urllib.quote_plus(i['url']), i['title'])
+      parameters = '%s?action=%s&url=%s&filter=%s' % \
+                   (sys.argv[0], i['action'], urllib.quote_plus(i['url']), filter)
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
     # Sort methods and content type...
     xbmcplugin.addSortMethod(handle=int(sys.argv[1]), sortMethod=xbmcplugin.SORT_METHOD_NONE)
@@ -89,9 +95,8 @@ class Main:
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
   def GetSubscriptions(self):
-    if Debug: self.LOG('DEBUG: GetSubscriptions()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
-    for k, v in s.iteritems():
+    if Debug: self.LOG('GetSubscriptions()')
+    for k, v in db.iteritems():
       id = k
       name = v['name']
       feedUrl = v['url']
@@ -104,12 +109,12 @@ class Main:
                        infoLabels={'title' : name,
                                    'plot' : summary,
                                    })
-      contextmenu = [('UnSubscription', 'XBMC.RunPlugin(%s?action=unsubscribe&key=%s)' % \
-                                                       (sys.argv[0], id))]
+      contextmenu = [(__language__(30102), 'XBMC.RunPlugin(%s?action=unsubscribe&id=%s)' % \
+                                                          (sys.argv[0], id))]
       listitem.addContextMenuItems(contextmenu, replaceItems=False)
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
-    s.close()
+    db.close()
     # Sort methods and content type...
     xbmcplugin.setContent(int(sys.argv[1]), 'movies')
     xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_UNSORTED)
@@ -117,12 +122,9 @@ class Main:
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def Categories(self):
-    if Debug: self.LOG('DEBUG: Categories()')
+  def Categories(self, filter):
+    if Debug: self.LOG('Categories()')
     categories = simplejson.loads(fetcher.fetch(self.Arguments('url', True), CACHE_TIME))
-    if self.Arguments('title') == 'Categories':
-      filter = 'category'
-    else: filter = 'language'
     for category in categories:
       title = category['name']
       listitem = xbmcgui.ListItem(title, iconImage='DefaultFolder.png', thumbnailImage=__icon__)
@@ -134,7 +136,7 @@ class Main:
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
   def GetDirectory(self, filter, title, sort='popular'):
-    if Debug: self.LOG('DEBUG: GetDirectory()')
+    if Debug: self.LOG('GetDirectory()')
     # for next page
     try:
       offset = int(self.Arguments('offset')) + 20
@@ -160,12 +162,12 @@ class Main:
       listitem = xbmcgui.ListItem(name, iconImage='DefaultVideo.png', thumbnailImage=thumb)
       if self._issubscripted(id):
         overlay = xbmcgui.ICON_OVERLAY_WATCHED
-        contextmenu = [('UnSubscription', 'XBMC.RunPlugin(%s?action=unsubscribe&key=%s)' % \
-                                                         (sys.argv[0], id))]
+        contextmenu = [(__language__(30102), 'XBMC.RunPlugin(%s?action=unsubscribe&id=%s)' % \
+                                                            (sys.argv[0], id))]
       else:
         overlay = xbmcgui.ICON_OVERLAY_NONE
-        contextmenu = [('Subscribe', 'XBMC.RunPlugin(%s?action=subscribe&key=%s&name=%s&feedurl=%s&thumbnail_url=%s&description=%s)' % \
-                                                    (sys.argv[0], id, urllib.quote_plus(name), urllib.quote_plus(feedUrl), thumb, summary))]
+        contextmenu = [(__language__(30101), 'XBMC.RunPlugin(%s?action=subscribe&id=%s&name=%s&feedurl=%s&thumbnail_url=%s&description=%s)' % \
+                                                            (sys.argv[0], id, urllib.quote_plus(name), urllib.quote_plus(feedUrl), thumb, summary))]
       listitem.setInfo(type='video',
                        infoLabels={'title' : name,
                                    'plot' : summary,
@@ -178,9 +180,9 @@ class Main:
     # Next Page
     # If less then 20 we are end of the list. No need next page.
     if not totalitem < 20:
-      listitem = xbmcgui.ListItem('Next Page >>', iconImage='DefaultVideo.png', thumbnailImage=__icon__)
+      listitem = xbmcgui.ListItem(__language__(30210), iconImage='DefaultVideo.png', thumbnailImage=__icon__)
       parameters = '%s?action=getdirectory&title=%s&filter=%s&offset=%i' % \
-                    (sys.argv[0], title, filter, offset)
+                   (sys.argv[0], title, filter, offset)
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
     # Sort methods and content type...
     xbmcplugin.setContent(int(sys.argv[1]), 'movies')
@@ -192,7 +194,7 @@ class Main:
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
   def GetMiroFeed(self, url):
-    if Debug: self.LOG('DEBUG: GetMiroFeed()')
+    if Debug: self.LOG('GetMiroFeed()')
     feedHtml = fetcher.fetch(url, CACHE_TIME)
     encoding = feedHtml.split('encoding="')[1].split('"')[0]
     feedHtml = feedHtml.decode(encoding, 'ignore').encode('utf-8')
@@ -233,12 +235,12 @@ class Main:
       listitem = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
       if self._issubscripted(id):
         infoLabels['overlay'] = xbmcgui.ICON_OVERLAY_WATCHED
-        contextmenu = [('UnSubscription', 'XBMC.RunPlugin(%s?action=unsubscribe&key=%s)' % \
-                                                         (sys.argv[0], id))]
+        contextmenu = [(__language__(30102), 'XBMC.RunPlugin(%s?action=unsubscribe&id=%s)' % \
+                                                            (sys.argv[0], id))]
       else:
         infoLabels['overlay'] = xbmcgui.ICON_OVERLAY_NONE
-        contextmenu = [('Subscribe', 'XBMC.RunPlugin(%s?action=subscribe&key=%s&name=%s&feedurl=%s&thumbnail_url=%s&description=%s)' % \
-                                                    (sys.argv[0], id, urllib.quote_plus(title), urllib.quote_plus(feedUrl), thumb, ''))]
+        contextmenu = [(__language__(30101), 'XBMC.RunPlugin(%s?action=subscribe&id=%s&name=%s&feedurl=%s&thumbnail_url=%s&description=%s)' % \
+                                                            (sys.argv[0], id, urllib.quote_plus(title), urllib.quote_plus(feedUrl), thumb, ''))]
       listitem.setInfo(type='video', infoLabels=infoLabels)
       listitem.addContextMenuItems(contextmenu, replaceItems=False)
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
@@ -346,7 +348,7 @@ class Main:
 
   #TODO: Fix youtube play
   def PlayYouTubeVideo(sender, id):
-    if Debug: self.LOG('DEBUG: PlayYouTubeVideo()')
+    if Debug: self.LOG('PlayYouTubeVideo()')
     yt_page = HTTP.Request(id).content
     fmt_url_map = re.findall('"fmt_url_map".+?"([^"]+)', yt_page)[0]
     fmt_url_map = fmt_url_map.replace('\/', '/').split(',')
@@ -377,37 +379,36 @@ class Main:
   def StripTags(self, str):
     return re.sub(r'<[^<>]+>', '', str)
 
-  def _subscribe(self, key, title, url, thumb, desc):
-    if Debug: self.LOG('DEBUG: _subscribe()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
+  def _subscribe(self, id, title, url, thumb, desc):
+    if Debug: self.LOG('_subscribe()')
     try:
-      s[str(key)] = {'name' : title,
+      db[str(id)] = {'name' : title,
                      'url' : url,
-                     'thumbnail_url': thumb,
-                     'description' : desc}
+                     'thumbnail_url' : thumb,
+                     'description' : desc,
+                     }
     finally:
-      s.close()
+      db.close()
 
-  def _unsubscribe(self, key):
-    if Debug: self.LOG('DEBUG: _unubscribe()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
+  def _unsubscribe(self, id):
+    if Debug: self.LOG('_unubscribe()')
     try:
-      del s[str(key)]
+      del db[str(id)]
     finally:
-      s.close()
+      db.close()
 
-  def _issubscripted(self, key):
-    if Debug: self.LOG('DEBUG: _issubscripted()')
-    s = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
-    if s.has_key(str(key)):
+  def _issubscripted(self, id):
+    if Debug: self.LOG('_issubscripted()')
+    if db.has_key(str(id)):
       return True
     else:
       return False
-    s.close()
+    db.close()
 
   def _notification(self, title, message):
-    if Debug: self.LOG('DEBUG: _notification()\ntitle: %s\nmessage: %s' % (title, message))
-    xbmc.executebuiltin("Notification(%s, %s, 6000)" % (title, message.encode('ascii', 'ignore')))
+    if Debug: self.LOG('_notification()\ntitle: %s\nmessage: %s' % (title, message))
+    xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % \
+                                     (title.encode('utf-8', 'ignore'), message.encode('utf-8', 'ignore'), 6000, __icon__))
 
   def Arguments(self, arg, unquote=False):
     Arguments = dict(part.split('=') for part in sys.argv[2][1:].split('&'))
@@ -417,7 +418,7 @@ class Main:
       return Arguments[arg]
 
   def LOG(self, description):
-    xbmc.log("[ADD-ON] '%s v%s': %s" % (__plugin__, __version__, description), xbmc.LOGNOTICE)
+    xbmc.log("[ADD-ON] '%s v%s': DEBUG: %s" % (__plugin__, __version__, description.encode('ascii', 'ignore')), xbmc.LOGNOTICE)
 
 class DiskCacheFetcher:
   def __init__(self, cache_dir=None):

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<strings>
+  <!-- Title -->
+  <string id="30000">Miro</string>
+  
+  <!-- Context Menu & Messages -->
+  <string id="30101">Abone ol</string>
+  <string id="30102">Aboneliği kaldır</string>
+  <string id="30103">Akış Aboneliklerim'e eklendi!</string>
+  <string id="30104">Akış Aboneliklerim'den silindi!</string>
+  
+  <!-- Directory -->
+  <string id="30201">[B]Aboneliklerim[/B]</string>
+  <string id="30202">Kategoriler</string>
+  <string id="30203">Diller</string>
+  <string id="30204">Yeni Kanallar</string>
+  <string id="30205">Tanıtılan Kanallar</string>
+  <string id="30206">Popüler Kanallar</string>
+  <string id="30207">En İyi Derecelendirilen Kanallar</string>
+  <string id="30208">HD Kanallar</string>
+  <string id="30209">Akış ara...</string>
+  <string id="30210">Daha Fazla...</string>
+</strings>

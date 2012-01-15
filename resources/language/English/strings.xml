@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<strings>
+  <!-- Title -->
+  <string id="30000">Miro</string>
+  
+  <!-- Context Menu & Messages -->
+  <string id="30101">Subscribe</string>
+  <string id="30102">Unsubscribe</string>
+  <string id="30103">Feed added to My Subscriptions!</string>
+  <string id="30104">Feed deleted from My Subscriptions!</string>
+  
+  <!-- Directory -->
+  <string id="30201">[B]My Subscriptions[/B]</string>
+  <string id="30202">Categories</string>
+  <string id="30203">Languages</string>
+  <string id="30204">New Channels</string>
+  <string id="30205">Featured Channels</string>
+  <string id="30206">Popular Channels</string>
+  <string id="30207">Top Rated Channels</string>
+  <string id="30208">HD Channels</string>
+  <string id="30209">Search for Feed...</string>
+  <string id="30210">More...</string>
+</strings>
