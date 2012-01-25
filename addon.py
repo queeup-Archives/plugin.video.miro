@@ -30,7 +30,7 @@ CACHE_TIME = CACHE_1HOUR
 MIRO_URL = 'http://www.miroguide.com/'
 MIRO_API = 'https://www.miroguide.com/api/'
 # Our database
-db = shelve.open(xbmc.translatePath(__cachedir__) + '/miro.db', protocol=2)
+db = shelve.open(xbmc.translatePath(__cachedir__ + 'miro.db'), protocol=2)
 
 # Fanart
 xbmcplugin.setPluginFanart(int(sys.argv[1]), __fanart__)
@@ -65,12 +65,11 @@ class Main:
   def START(self):
     if Debug: self.LOG('START()')
     category = []
-    # If there is miro.db show My Subscription directory.
-    if os.path.isfile(xbmc.translatePath(__cachedir__ + '/miro.db')):
-      if db.keys() != []:
-        if Debug: self.LOG('DEBUG: My Subscriptions directory activated.')
-        category += [{'title':__language__(30201), 'url':'', 'action':'mysubscriptions'}]
-      db.close()
+    # If keys exist in miro.db show My Subscription directory.
+    if db.keys() != list():
+      if Debug: self.LOG('My Subscriptions directory activated.')
+      category += [{'title':__language__(30201), 'url':'', 'action':'mysubscriptions'}, ]
+    db.close()
     category += [{'title':__language__(30202), 'url':'https://www.miroguide.com/api/list_categories?datatype=json', 'action':'categories', 'filter':'category'},
                  {'title':__language__(30203), 'url':'https://www.miroguide.com/api/list_languages?datatype=json', 'action':'categories', 'filter':'language'},
                  {'title':__language__(30204), 'url':'http://feeds.feedburner.com/miroguide/new', 'action':'getmirofeed'},
