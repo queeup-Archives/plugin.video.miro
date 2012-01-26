@@ -29,6 +29,12 @@ CACHE_TIME = CACHE_1HOUR
 
 MIRO_URL = 'http://www.miroguide.com/'
 MIRO_API = 'https://www.miroguide.com/api/'
+
+# On windows profile folder not created automaticly
+if not os.path.exists(xbmc.translatePath(__cachedir__)):
+  if Debug: print 'Profile folder not exist. Creating now for database!'
+  os.mkdir(xbmc.translatePath(__cachedir__))
+
 # Our database
 db = shelve.open(xbmc.translatePath(__cachedir__ + 'miro.db'), protocol=2)
 

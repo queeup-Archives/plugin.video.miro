@@ -1,5 +1,10 @@
 plugin.video.miro:
 ------------------
+vesion 1.0.4 (26.01.2012)
+  -fixed: On Windows profile folder not created automaticly
+  -changed: the md5 module is deprecated; changed to hashlib instead
+  -other: cosmetic
+
 vesion 1.0.3 (26.01.2012)
   -fixed: cross platfom database issue
 
