@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon
   id="plugin.video.miro"
-  version="1.0.4"
+  version="2.0.0"
   name="Miro"
   provider-name="Plex, queeup">
   <requires>
     <import addon="xbmc.python"
-            version="1.0"/>
+            version="2.0"/>
     <import addon="script.module.simplejson"
             version="2.0.10"/>
     <import addon="script.module.feedparser"
