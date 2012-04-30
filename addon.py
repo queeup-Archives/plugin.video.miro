@@ -1,12 +1,26 @@
 # -*- coding: utf-8 -*-
 
-# Debug
-Debug = False
-
 # Imports
-import sys, os, re, string, urllib, urllib2, simplejson, feedparser, shelve
-import hashlib, os, shutil, tempfile, time, errno
-import xbmc, xbmcgui, xbmcplugin, xbmcaddon
+import os
+import re
+import sys
+import time
+import errno
+import shelve
+import shutil
+import hashlib
+import tempfile
+import urllib
+import urllib2
+import simplejson
+import feedparser
+import xbmc
+import xbmcgui
+import xbmcplugin
+import xbmcaddon
+
+# DEBUG
+DEBUG = False
 
 __addon__ = xbmcaddon.Addon(id='plugin.video.miro')
 __info__ = __addon__.getAddonInfo
@@ -32,7 +46,8 @@ MIRO_API = 'https://www.miroguide.com/api/'
 
 # On windows profile folder not created automaticly
 if not os.path.exists(xbmc.translatePath(__cachedir__)):
-  if Debug: print 'Profile folder not exist. Creating now for database!'
+  if DEBUG:
+    print 'Profile folder not exist. Creating now for database!'
   os.mkdir(xbmc.translatePath(__cachedir__))
 
 # Our database
@@ -41,39 +56,42 @@ db = shelve.open(xbmc.translatePath(__cachedir__ + 'miro.db'), protocol=2)
 # Fanart
 xbmcplugin.setPluginFanart(int(sys.argv[1]), __fanart__)
 
+
 class Main:
   def __init__(self):
     if ("action=playyoutubevideo" in sys.argv[2]):
-      self.PlayYouTubeVideo()
+      self.play_youtube_video()
     elif ("action=categories" in sys.argv[2]):
-      self.Categories(self.Arguments('filter'))
+      self.categories(self.arguments('filter'))
     elif ("action=getdirectory" in sys.argv[2]):
-      self.GetDirectory(self.Arguments('filter'), self.Arguments('title'))
+      self.get_directory(self.arguments('filter'), self.arguments('title'))
     elif ("action=getfeed" in sys.argv[2]):
-      self.GetFeed(self.Arguments('url', True))
+      self.get_feed(self.arguments('url', True))
     elif ("action=getmirofeed" in sys.argv[2]):
-      self.GetMiroFeed(self.Arguments('url', True))
+      self.get_miro_feed(self.arguments('url', True))
     elif ("action=subscribe" in sys.argv[2]):
-      self._subscribe(self.Arguments('id'),
-                      self.Arguments('name', True),
-                      self.Arguments('feedurl', True),
-                      self.Arguments('thumbnail_url'),
-                      self.Arguments('description',))
+      self._subscribe(self.arguments('id'),
+                      self.arguments('name', True),
+                      self.arguments('feedurl', True),
+                      self.arguments('thumbnail_url'),
+                      self.arguments('description',))
       self._notification(__language__(30101), __language__(30103))
     elif ("action=unsubscribe" in sys.argv[2]):
-      self._unsubscribe(self.Arguments('id', False))
+      self._unsubscribe(self.arguments('id', False))
       self._notification(__language__(30102), __language__(30104))
     elif ("action=mysubscription" in sys.argv[2]):
-      self.GetSubscriptions()
+      self.get_subscriptions()
     else:
-      self.START()
+      self.main_menu()
 
-  def START(self):
-    if Debug: self.LOG('START()')
+  def main_menu(self):
+    if DEBUG:
+      self.log('main_menu()')
     category = []
     # If keys exist in miro.db show My Subscription directory.
     if db.keys() != list():
-      if Debug: self.LOG('My Subscriptions directory activated.')
+      if DEBUG:
+        self.log('My Subscriptions directory activated.')
       category += [{'title':__language__(30201), 'url':'', 'action':'mysubscriptions'}, ]
     db.close()
     category += [{'title':__language__(30202), 'url':'https://www.miroguide.com/api/list_categories?datatype=json', 'action':'categories', 'filter':'category'},
@@ -87,35 +105,38 @@ class Main:
                  ]
     for i in category:
       try:
-        filter = i['filter']
+        _filter = i['filter']
       except:
-        filter = ''
+        _filter = ''
       listitem = xbmcgui.ListItem(i['title'], iconImage='DefaultFolder.png', thumbnailImage=__icon__)
       parameters = '%s?action=%s&url=%s&filter=%s' % \
-                   (sys.argv[0], i['action'], urllib.quote_plus(i['url']), filter)
+                   (sys.argv[0], i['action'], urllib.quote_plus(i['url']), _filter)
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
     # Sort methods and content type...
     xbmcplugin.addSortMethod(handle=int(sys.argv[1]), sortMethod=xbmcplugin.SORT_METHOD_NONE)
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def GetSubscriptions(self):
-    if Debug: self.LOG('GetSubscriptions()')
+  def get_subscriptions(self):
+    if DEBUG:
+      self.log('get_subscriptions()')
     for k, v in db.iteritems():
-      id = k
+      _id = k
       name = v['name']
       feedUrl = v['url']
-      if not feedUrl: continue
-      try: thumb = v['thumbnail_url']
-      except: pass
+      if not feedUrl:
+        continue
+      try:
+        thumb = v['thumbnail_url']
+      except:
+        pass
       summary = v['description']
       listitem = xbmcgui.ListItem(name, iconImage='DefaultVideo.png', thumbnailImage=thumb)
       listitem.setInfo(type='video',
-                       infoLabels={'title' : name,
-                                   'plot' : summary,
-                                   })
+                       infoLabels={'title': name,
+                                   'plot': summary})
       contextmenu = [(__language__(30102), 'XBMC.RunPlugin(%s?action=unsubscribe&id=%s)' % \
-                                                          (sys.argv[0], id))]
+                                                          (sys.argv[0], _id))]
       listitem.addContextMenuItems(contextmenu, replaceItems=False)
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
@@ -127,58 +148,63 @@ class Main:
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def Categories(self, filter):
-    if Debug: self.LOG('Categories()')
-    categories = simplejson.loads(fetcher.fetch(self.Arguments('url', True), CACHE_TIME))
+  def categories(self, _filter):
+    if DEBUG:
+      self.log('categories()')
+    categories = simplejson.loads(fetcher.fetch(self.arguments('url', True), CACHE_TIME))
     for category in categories:
       title = category['name']
       listitem = xbmcgui.ListItem(title, iconImage='DefaultFolder.png', thumbnailImage=__icon__)
-      parameters = '%s?action=getdirectory&title=%s&filter=%s' % (sys.argv[0], urllib.quote_plus(title), filter)
+      parameters = '%s?action=getdirectory&title=%s&filter=%s' % (sys.argv[0], urllib.quote_plus(title), _filter)
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
     # Sort methods and content type...
     xbmcplugin.addSortMethod(handle=int(sys.argv[1]), sortMethod=xbmcplugin.SORT_METHOD_NONE)
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def GetDirectory(self, filter, title, sort='popular'):
-    if Debug: self.LOG('GetDirectory()')
+  def get_directory(self, _filter, title, sort='popular'):
+    if DEBUG:
+      self.log('get_directory()')
     # for next page
     try:
-      offset = int(self.Arguments('offset')) + 20
+      offset = int(self.arguments('offset')) + 20
     except:
       offset = 0
-    url = MIRO_API + 'get_channels?datatype=json&filter=%s&filter_value=%s&sort=%s&offset=%s' % (filter, title, sort, offset)
+    url = MIRO_API + 'get_channels?datatype=json&filter=%s&filter_value=%s&sort=%s&offset=%s' % (_filter, title, sort, offset)
     results = simplejson.loads(fetcher.fetch(url, CACHE_TIME))
     totalitem = len([i['id'] for i in results])
     for entry in results:
-      id = entry['id']
+      _id = entry['id']
       name = entry['name'].encode('utf-8', 'replace')
       publisher = entry['publisher']
       feedUrl = entry['url']
-      if not feedUrl: continue
-      if not len(entry['item']): continue
-      try: thumb = entry['thumbnail_url']
-      except: pass
+      if not feedUrl:
+        continue
+      if not len(entry['item']):
+        continue
+      try:
+        thumb = entry['thumbnail_url']
+      except:
+        pass
       summary = entry['description']
       subscribe_hit_url = entry['subscribe_hit_url']
       subscription_count = entry['subscription_count']
       hi_def = entry['hi_def']
       average_rating = entry['average_rating']
       listitem = xbmcgui.ListItem(name, iconImage='DefaultVideo.png', thumbnailImage=thumb)
-      if self._issubscripted(id):
+      if self._issubscripted(_id):
         overlay = xbmcgui.ICON_OVERLAY_WATCHED
         contextmenu = [(__language__(30102), 'XBMC.RunPlugin(%s?action=unsubscribe&id=%s)' % \
-                                                            (sys.argv[0], id))]
+                                                            (sys.argv[0], _id))]
       else:
         overlay = xbmcgui.ICON_OVERLAY_NONE
         contextmenu = [(__language__(30101), 'XBMC.RunPlugin(%s?action=subscribe&id=%s&name=%s&feedurl=%s&thumbnail_url=%s&description=%s)' % \
-                                                            (sys.argv[0], id, urllib.quote_plus(name), urllib.quote_plus(feedUrl), thumb, summary))]
+                                                            (sys.argv[0], _id, urllib.quote_plus(name), urllib.quote_plus(feedUrl), thumb, summary))]
       listitem.setInfo(type='video',
-                       infoLabels={'title' : name,
-                                   'plot' : summary,
-                                   'director' : publisher,
-                                   'overlay' : overlay
-                                   })
+                       infoLabels={'title': name,
+                                   'plot': summary,
+                                   'director': publisher,
+                                   'overlay': overlay})
       listitem.addContextMenuItems(contextmenu, replaceItems=False)
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
@@ -187,7 +213,7 @@ class Main:
     if not totalitem < 20:
       listitem = xbmcgui.ListItem(__language__(30210), iconImage='DefaultVideo.png', thumbnailImage=__icon__)
       parameters = '%s?action=getdirectory&title=%s&filter=%s&offset=%i' % \
-                   (sys.argv[0], title, filter, offset)
+                   (sys.argv[0], title, _filter, offset)
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
     # Sort methods and content type...
     xbmcplugin.setContent(int(sys.argv[1]), 'movies')
@@ -198,8 +224,9 @@ class Main:
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def GetMiroFeed(self, url):
-    if Debug: self.LOG('GetMiroFeed()')
+  def get_miro_feed(self, url):
+    if DEBUG:
+      self.log('get_miro_feed()')
     feedHtml = fetcher.fetch(url, CACHE_TIME)
     encoding = feedHtml.split('encoding="')[1].split('"')[0]
     feedHtml = feedHtml.decode(encoding, 'ignore').encode('utf-8')
@@ -208,23 +235,23 @@ class Main:
     for item in feed['items']:
       infoLabels = {}
       if item.link.startswith('http://www.miroguide.com/feeds/'):
-        id = item.link.replace('http://www.miroguide.com/feeds/', '')
+        _id = item.link.replace('http://www.miroguide.com/feeds/', '')
       else:
-        id = re.findall('/(.+?).jpeg', item.thumbnail)[0]
+        _id = re.findall('/(.+?).jpeg', item.thumbnail)[0]
       title = infoLabels['title'] = item.title.replace('&#39;', "'").replace('&amp;', '&').replace('&quot;', '"')
-      if isinstance(title, str): # BAD: Not true for Unicode strings!
+      if isinstance(title, str):  # BAD: Not true for Unicode strings!
         try:
-          title = infoLabels['title'] = title.encode('utf-8', 'replace') #.encode('utf-8')
+          title = infoLabels['title'] = title.encode('utf-8', 'replace')  # .encode('utf-8')
         except:
-          continue #skip this, it likely will bork
+          continue  # skip this, it likely will bork
       # I put it here because above isinstance code not working well with some languages.
-      title = infoLabels['title'] = title.encode('utf-8', 'replace') #.encode('utf-8')
+      title = infoLabels['title'] = title.encode('utf-8', 'replace')  # .encode('utf-8')
       try:
         infoLabels['date'] = item.updated
       except:
         infoLabels['date'] = ''
       subtitle = infoLabels['date']
-      soup = self.StripTags(item.description)#, convertEntities=BSS.HTML_ENTITIES
+      soup = self._strip_tags(item.description)  # , convertEntities=BSS.HTML_ENTITIES
       try:
         infoLabels['plot'] = soup.contents[0]
       except:
@@ -235,17 +262,17 @@ class Main:
       feedUrl = item["summary_detail"]["value"].replace('amp;', '')
       feedUrl = feedUrl[feedUrl.find('url1=') + 5:]
       feedUrl = feedUrl[:feedUrl.find('&trackback1')].replace('%3A', ':')
-      feddUrl = feedUrl.replace(' ', '%20')
+      feedUrl = feedUrl.replace(' ', '%20')
 
       listitem = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
-      if self._issubscripted(id):
+      if self._issubscripted(_id):
         infoLabels['overlay'] = xbmcgui.ICON_OVERLAY_WATCHED
         contextmenu = [(__language__(30102), 'XBMC.RunPlugin(%s?action=unsubscribe&id=%s)' % \
-                                                            (sys.argv[0], id))]
+                                                            (sys.argv[0], _id))]
       else:
         infoLabels['overlay'] = xbmcgui.ICON_OVERLAY_NONE
         contextmenu = [(__language__(30101), 'XBMC.RunPlugin(%s?action=subscribe&id=%s&name=%s&feedurl=%s&thumbnail_url=%s&description=%s)' % \
-                                                            (sys.argv[0], id, urllib.quote_plus(title), urllib.quote_plus(feedUrl), thumb, ''))]
+                                                            (sys.argv[0], _id, urllib.quote_plus(title), urllib.quote_plus(feedUrl), thumb, ''))]
       listitem.setInfo(type='video', infoLabels=infoLabels)
       listitem.addContextMenuItems(contextmenu, replaceItems=False)
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
@@ -259,26 +286,28 @@ class Main:
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
-  def GetFeed(self, url):
-    if Debug: self.LOG('DEBUG: GetFeed()')
+  def get_feed(self, url):
+    if DEBUG:
+      self.log('get_feed()')
     feedHtml = fetcher.fetch(url, CACHE_TIME)
-    encoding = re.search(r"encoding=([\"'])([^\1]*?)\1", feedHtml).group(2) #'
+    encoding = re.search(r"encoding=([\"'])([^\1]*?)\1", feedHtml).group(2)
     feedHtml = feedHtml.decode(encoding, 'ignore').encode('utf-8')
 
     feed = feedparser.parse(feedHtml)
     if 'items' in feed:
       items = feed['items']
-    else: items = feed['entries']
+    else:
+      items = feed['entries']
     hasInvalidItems = False
     for item in items:
       infoLabels = {}
       infoLabels['duration'] = ''
-      title = infoLabels['title'] = self.StripTags(item.title.replace('&#39;', "'").replace('&amp;', '&'))
-      if isinstance(title, str): # BAD: Not true for Unicode strings!
+      title = infoLabels['title'] = self._strip_tags(item.title.replace('&#39;', "'").replace('&amp;', '&'))
+      if isinstance(title, str):  # BAD: Not true for Unicode strings!
         try:
-          title = infoLabels['title'] = title.encode('utf-8', 'replace') #.encode('utf-8')
+          title = infoLabels['title'] = title.encode('utf-8', 'replace')  # .encode('utf-8')
         except:
-          continue #skip this, it likely will bork
+          continue  # skip this, it likely will bork
       try:
         date_p = item.date_parsed
         infoLabels['date'] = time.strftime("%d.%m.%Y", date_p)
@@ -286,8 +315,8 @@ class Main:
       except:
         infoLabels['date'] = ''
       subtitle = infoLabels['date']
-      soup = self.StripTags(item.description)#, convertEntities=BSS.HTML_ENTITIES
-      if item.has_key('subtitle'):
+      soup = self._strip_tags(item.description)  # , convertEntities=BSS.HTML_ENTITIES
+      if 'subtitle' in item:
         infoLabels['plot'] = item.subtitle
       else:
         try:
@@ -299,11 +328,12 @@ class Main:
       except:
         try:
           thumb = item.thumbnail
-        except: thumb = ''
+        except:
+          thumb = ''
       key = ''
-      if item.has_key('itunes_duration'):
+      if 'itunes_duration' in item:
         infoLabels['duration'] = item.itunes_duration
-      if item.has_key('enclosures'):
+      if 'enclosures' in item:
         for enclosure in item["enclosures"]:
           key = enclosure['href']
           try:
@@ -321,7 +351,7 @@ class Main:
         continue
       if key.count('youtube') > 0:
         if key.count('watch') == 0:
-          key = 'http://www.youtube.com/watch?v=' + key.split('v/')[-1][:11] #http://www.youtube.com/v/hlkDIYxUrpA&amp;amp;hl=en&amp;amp;fs=1
+          key = 'http://www.youtube.com/watch?v=' + key.split('v/')[-1][:11]
           thumb = 'http://i.ytimg.com/vi/%s/default.jpg' % key.split("=")[-1]
           listitem_yt = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
           listitem_yt.setInfo(type='video', infoLabels=infoLabels)
@@ -352,9 +382,10 @@ class Main:
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
 
   #TODO: Fix youtube play
-  def PlayYouTubeVideo(sender, id):
-    if Debug: self.LOG('PlayYouTubeVideo()')
-    yt_page = HTTP.Request(id).content
+  '''
+  def play_youtube_video(sender, _id):
+    if DEBUG: self.log('play_youtube_video()')
+    yt_page = HTTP.Request(_id).content
     fmt_url_map = re.findall('"fmt_url_map".+?"([^"]+)', yt_page)[0]
     fmt_url_map = fmt_url_map.replace('\/', '/').split(',')
 
@@ -380,50 +411,55 @@ class Main:
     url = fmts_info[str(fmt)]
     url = url.replace('\\u0026', '&')
     return Redirect(url)
+  '''
 
-  def StripTags(self, str):
-    return re.sub(r'<[^<>]+>', '', str)
+  def _strip_tags(self, _str):
+    return re.sub(r'<[^<>]+>', '', _str)
 
-  def _subscribe(self, id, title, url, thumb, desc):
-    if Debug: self.LOG('_subscribe()')
+  def _subscribe(self, _id, title, url, thumb, desc):
+    if DEBUG:
+      self.log('_subscribe()')
     try:
-      db[str(id)] = {'name' : title,
-                     'url' : url,
-                     'thumbnail_url' : thumb,
-                     'description' : desc,
-                     }
+      db[str(_id)] = {'name': title,
+                     'url': url,
+                     'thumbnail_url': thumb,
+                     'description': desc}
     finally:
       db.close()
 
-  def _unsubscribe(self, id):
-    if Debug: self.LOG('_unubscribe()')
+  def _unsubscribe(self, _id):
+    if DEBUG:
+      self.log('_unubscribe()')
     try:
-      del db[str(id)]
+      del db[str(_id)]
     finally:
       db.close()
 
-  def _issubscripted(self, id):
-    if Debug: self.LOG('_issubscripted()')
-    if db.has_key(str(id)):
+  def _issubscripted(self, _id):
+    if DEBUG:
+      self.log('_issubscripted()')
+    if str(_id) in db:
       return True
     else:
       return False
     db.close()
 
   def _notification(self, title, message):
-    if Debug: self.LOG('_notification()\ntitle: %s\nmessage: %s' % (title, message))
+    if DEBUG:
+      self.log('_notification()\ntitle: %s\nmessage: %s' % (title, message))
     xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % \
                                      (title.encode('utf-8', 'ignore'), message.encode('utf-8', 'ignore'), 6000, __icon__))
 
-  def Arguments(self, arg, unquote=False):
-    Arguments = dict(part.split('=') for part in sys.argv[2][1:].split('&'))
+  def arguments(self, arg, unquote=False):
+    _arguments = dict(part.split('=') for part in sys.argv[2][1:].split('&'))
     if unquote:
-      return urllib.unquote_plus(Arguments[arg])
+      return urllib.unquote_plus(_arguments[arg])
     else:
-      return Arguments[arg]
+      return _arguments[arg]
 
-  def LOG(self, description):
+  def log(self, description):
     xbmc.log("[ADD-ON] '%s v%s': DEBUG: %s" % (__plugin__, __version__, description.encode('ascii', 'ignore')), xbmc.LOGNOTICE)
+
 
 class DiskCacheFetcher:
   def __init__(self, cache_dir=None):
@@ -444,16 +480,18 @@ class DiskCacheFetcher:
           raise
     self.cache_dir = cache_dir
 
-  def fetch(self, url, max_age=0):
+  def fetch(self, url, max_age=CACHE_TIME):
     # Use MD5 hash of the URL as the filename
     filename = hashlib.md5(url).hexdigest()
     filepath = os.path.join(self.cache_dir, filename)
     if os.path.exists(filepath):
       if int(time.time()) - os.path.getmtime(filepath) < max_age:
-        if Debug: print 'File exists and reading from cache.'
+        if DEBUG:
+          print 'File exists and reading from cache.'
         return open(filepath).read()
     # Retrieve over HTTP and cache, using rename to avoid collisions
-    if Debug: print 'File not yet cached or cache time expired. File reading from URL and try to cache to disk'
+    if DEBUG:
+      print 'File not yet cached or cache time expired. File reading from URL and try to cache to disk'
     data = urllib2.urlopen(url).read()
     fd, temppath = tempfile.mkstemp()
     fp = os.fdopen(fd, 'w')
