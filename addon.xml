@@ -10,7 +10,7 @@
     <import addon="script.module.simplejson"
             version="2.0.10"/>
     <import addon="script.module.feedparser"
-            version="5.1"/>
+            version="5.1.2"/>
   </requires>
   <extension point="xbmc.python.pluginsource"
              library="addon.py">
