@@ -43,7 +43,7 @@ CACHE_TIME = CACHE_1HOUR
 MIRO_URL = 'http://www.miroguide.com/'
 MIRO_API = 'https://www.miroguide.com/api/'
 
-# On windows profile folder not created automaticly
+# On windows profile folder not created automatically
 if not os.path.exists(xbmc.translatePath(__cachedir__)):
   if DEBUG:
     print 'Profile folder not exist. Creating now for database!'
@@ -208,7 +208,7 @@ class Main:
       parameters = '%s?action=getfeed&url=%s' % (sys.argv[0], urllib.quote_plus(feedUrl))
       xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem, True)])
     # Next Page
-    # If less then 20 we are end of the list. No need next page.
+    # If less then 20 item we are end of the list. No need next page.
     if not totalitem < 20:
       listitem = xbmcgui.ListItem(__language__(30210), iconImage='DefaultVideo.png', thumbnailImage=__icon__)
       parameters = '%s?action=getdirectory&title=%s&filter=%s&offset=%i' % \
@@ -361,7 +361,7 @@ class Main:
       if hasInvalidItems:
         if DEBUG:
           self.log('Invalid items. Unsupported media types found.\nURL: %s' % key)
-        self._notification('Invalid items', 'No supported media types found.')
+        self._notification('Invalid items', 'Unsupported media types found.')
         return
       listitem = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
       listitem.setInfo(type='video', infoLabels=infoLabels)
