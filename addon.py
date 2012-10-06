@@ -343,11 +343,8 @@ class Main:
         key = item.link
       if key.count('.torrent') > 0:
         hasInvalidItems = True
-        #insert message box re: not supporting torrents here.
-        continue
       if key.count('.html') > 0:
         hasInvalidItems = True
-        continue
       if key.count('vimeo.com') > 0:
         if DEBUG:
           self.log('Geting vimeo video id to play with plugin.video.youtube add-on')
@@ -362,7 +359,10 @@ class Main:
       if thumb == '':
           thumb = __icon__
       if hasInvalidItems:
-        print ('Invalid items', 'No supported media types found.')
+        if DEBUG:
+          self.log('Invalid items. Unsupported media types found.\nURL: %s' % key)
+        self._notification('Invalid items', 'No supported media types found.')
+        return
       listitem = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
       listitem.setInfo(type='video', infoLabels=infoLabels)
       listitem.setProperty('IsPlayable', 'true')
