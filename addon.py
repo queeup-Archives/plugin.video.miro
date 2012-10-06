@@ -348,14 +348,12 @@ class Main:
       if key.count('.html') > 0:
         hasInvalidItems = True
         continue
-      if key.count('youtube') > 0:
-        if key.count('watch') == 0:
-          key = 'http://www.youtube.com/watch?v=' + key.split('v/')[-1][:11]
-          thumb = 'http://i.ytimg.com/vi/%s/default.jpg' % key.split("=")[-1]
-          listitem_yt = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
-          listitem_yt.setInfo(type='video', infoLabels=infoLabels)
-          parameters = '%s?action=playyoutubevideo&url=%s' % (sys.argv[0], key)
-          xbmcplugin.addDirectoryItems(int(sys.argv[1]), [(parameters, listitem_yt, False)])
+      if key.count('youtube.com') > 0:
+        if DEBUG:
+          self.log('Geting youtube video id to play with plugin.video.youtube add-on')
+        video_id = key.split('=')[1].split('&')[0]
+        thumb = 'http://i.ytimg.com/vi/%s/default.jpg' % video_id
+        key = 'plugin://plugin.video.youtube/?action=play_video&videoid=%s' % (video_id)
       if thumb == '':
           thumb = __icon__
       if hasInvalidItems:
@@ -379,38 +377,6 @@ class Main:
       pass
     # End of directory...
     xbmcplugin.endOfDirectory(int(sys.argv[1]), True)
-
-  #TODO: Fix youtube play
-  '''
-  def play_youtube_video(sender, _id):
-    if DEBUG: self.log('play_youtube_video()')
-    yt_page = HTTP.Request(_id).content
-    fmt_url_map = re.findall('"fmt_url_map".+?"([^"]+)', yt_page)[0]
-    fmt_url_map = fmt_url_map.replace('\/', '/').split(',')
-
-    fmts = []
-    fmts_info = {}
-
-    for f in fmt_url_map:
-      (fmt, url) = f.split('|')
-      fmts.append(fmt)
-      fmts_info[str(fmt)] = url
-
-    index = 0
-    if YOUTUBE_FMT[index] in fmts:
-      fmt = YOUTUBE_FMT[index]
-    else:
-      for i in reversed(range(0, index + 1)):
-        if str(YOUTUBE_FMT[i]) in fmts:
-          fmt = YOUTUBE_FMT[i]
-          break
-        else:
-          fmt = 5
-
-    url = fmts_info[str(fmt)]
-    url = url.replace('\\u0026', '&')
-    return Redirect(url)
-  '''
 
   def _strip_tags(self, _str):
     return re.sub(r'<[^<>]+>', '', _str)
