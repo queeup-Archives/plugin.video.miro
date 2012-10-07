@@ -74,10 +74,8 @@ class Main:
                       self.arguments('feedurl', True),
                       self.arguments('thumbnail_url'),
                       self.arguments('description',))
-      self._notification(__language__(30101), __language__(30103))
     elif ("action=unsubscribe" in sys.argv[2]):
       self._unsubscribe(self.arguments('id', False))
-      self._notification(__language__(30102), __language__(30104))
     elif ("action=mysubscription" in sys.argv[2]):
       self.get_subscriptions()
     else:
@@ -394,6 +392,12 @@ class Main:
                      'url': url,
                      'thumbnail_url': thumb,
                      'description': desc}
+      if DEBUG:
+        self.log('succesfully subscribed.')
+      self._notification(__language__(30101), __language__(30103))
+    except:
+      if DEBUG:
+        self.log('ERROR while subscribe!')
     finally:
       db.close()
 
@@ -402,6 +406,12 @@ class Main:
       self.log('_unubscribe()')
     try:
       del db[str(_id)]
+      if DEBUG:
+        self.log('succesfully unsubscribed.')
+      self._notification(__language__(30102), __language__(30104))
+    except:
+      if DEBUG:
+        self.log('ERROR while unsubscribe!')
     finally:
       db.close()
 
@@ -416,7 +426,7 @@ class Main:
 
   def _notification(self, title, message):
     if DEBUG:
-      self.log('_notification()\ntitle: %s\nmessage: %s' % (title, message))
+      self.log('_notification()')
     xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % \
                                      (title.encode('utf-8', 'ignore'), message.encode('utf-8', 'ignore'), 6000, __icon__))
 
