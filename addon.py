@@ -150,7 +150,7 @@ class Main:
   def categories(self, _filter):
     if DEBUG:
       self.log('categories()')
-    categories = simplejson.loads(fetcher.fetch(self.arguments('url', True), CACHE_TIME))
+    categories = simplejson.loads(fetcher.fetch(self.arguments('url', True)))
     for category in categories:
       title = category['name']
       listitem = xbmcgui.ListItem(title, iconImage='DefaultFolder.png', thumbnailImage=__icon__)
@@ -170,7 +170,7 @@ class Main:
     except:
       offset = 0
     url = MIRO_API + 'get_channels?datatype=json&filter=%s&filter_value=%s&sort=%s&offset=%s' % (_filter, title, sort, offset)
-    results = simplejson.loads(fetcher.fetch(url, CACHE_TIME))
+    results = simplejson.loads(fetcher.fetch(url))
     totalitem = len([i['id'] for i in results])
     for entry in results:
       _id = entry['id']
@@ -226,7 +226,7 @@ class Main:
   def get_miro_feed(self, url):
     if DEBUG:
       self.log('get_miro_feed()')
-    feedHtml = fetcher.fetch(url, CACHE_TIME)
+    feedHtml = fetcher.fetch(url)
     encoding = feedHtml.split('encoding="')[1].split('"')[0]
     feedHtml = feedHtml.decode(encoding, 'ignore').encode('utf-8')
 
@@ -288,7 +288,7 @@ class Main:
   def get_feed(self, url):
     if DEBUG:
       self.log('get_feed()')
-    feedHtml = fetcher.fetch(url, CACHE_TIME)
+    feedHtml = fetcher.fetch(url)
     encoding = re.search(r"encoding=([\"'])([^\1]*?)\1", feedHtml).group(2)
     feedHtml = feedHtml.decode(encoding, 'ignore').encode('utf-8')
 
