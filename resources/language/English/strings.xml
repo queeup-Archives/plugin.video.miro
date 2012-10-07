@@ -8,6 +8,8 @@
   <string id="30102">Unsubscribe</string>
   <string id="30103">Feed added to My Subscriptions!</string>
   <string id="30104">Feed deleted from My Subscriptions!</string>
+  <string id="30105">Invalid items!</string>
+  <string id="30106">Unsupported media types found.</string>
   
   <!-- Directory -->
   <string id="30201">[B]My Subscriptions[/B]</string>

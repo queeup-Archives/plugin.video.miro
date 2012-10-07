@@ -359,7 +359,7 @@ class Main:
       if hasInvalidItems:
         if DEBUG:
           self.log('Invalid items. Unsupported media types found.\nURL: %s' % key)
-        self._notification('Invalid items', 'Unsupported media types found.')
+        self._notification(__language__(30105), __language__(30106))
         return
       listitem = xbmcgui.ListItem(title, iconImage='DefaultVideo.png', thumbnailImage=thumb)
       listitem.setInfo(type='video', infoLabels=infoLabels)
